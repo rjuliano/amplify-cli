@@ -59,6 +59,7 @@ function constructApi(metadata, amplifyConfig) {
         amplifyConfig[categoryName].plugins[pluginName] = amplifyConfig[categoryName].plugins[pluginName] || {};
 
         if (resourceMeta.service === 'AppSync') {
+          const authConfig = resourceMeta.output.authConfig
           let authorizationType;
           if (resourceMeta.output.authConfig && resourceMeta.output.authConfig.defaultAuthentication) {
             authorizationType = resourceMeta.output.authConfig.defaultAuthentication.authenticationType;
@@ -70,8 +71,24 @@ function constructApi(metadata, amplifyConfig) {
             endpoint: resourceMeta.output.GraphQLAPIEndpointOutput,
             region,
             authorizationType,
-            apiKey: resourceMeta.output.GraphQLAPIKeyOutput,
+            apiKey: authorizationType === 'API_KEY' ?
+                resourceMeta.output.GraphQLAPIKeyOutput :
+                null,
           };
+          if (authConfig.additionalAuthenticationProviders && authConfig.additionalAuthenticationProviders.length > 0){
+            authConfig.additionalAuthenticationProviders.forEach( provider => {
+              console.log("Additional type:" + JSON.stringify(provider))
+              amplifyConfig[categoryName].plugins[pluginName][r + "_" + provider.authenticationType] = {
+                endpointType: 'GraphQL',
+                endpoint: resourceMeta.output.GraphQLAPIEndpointOutput,
+                region,
+                authorizationType: provider.authenticationType,
+                apiKey: provider.authenticationType === 'API_KEY' ?
+                            resourceMeta.output.GraphQLAPIKeyOutput :
+                            null,
+              }
+            })
+          }
         } else if (resourceMeta.service === 'API Gateway') {
           amplifyConfig[categoryName].plugins[pluginName][r] = {
             endpointType: 'REST',
